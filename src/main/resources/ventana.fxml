@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.canvas.Canvas?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.ControladorGUI" prefWidth="900" prefHeight="600">
+    <center>
+        <VBox alignment="CENTER" style="-fx-background-color: #1e1e1e; -fx-padding: 10;">
+            <Label text="Mapa del Macrocentro de Salta" style="-fx-text-fill: white; -fx-font-size: 16;"/>
+            <Canvas fx:id="canvasMapa" width="800" height="600"/>
+        </VBox>
+    </center>
+
+    <right>
+        <VBox spacing="15" style="-fx-padding: 15; -fx-background-color: #2d2d2d;" prefWidth="300">
+            <Label text="Vehículos Disponibles" style="-fx-text-fill: lightgray; -fx-font-weight: bold;"/>
+            <ListView fx:id="listaVehiculos" prefHeight="200"/>
+            
+            <Separator/>
+            
+            <Label text="Cola de Prioridad - Despacho" style="-fx-text-fill: lightgray; -fx-font-weight: bold;"/>
+            <ListView fx:id="listaDespacho" prefHeight="200"/>
+            
+            <Button text="NUEVA SOLICITUD" onAction="#handleNuevaSolicitud" maxWidth="Infinity" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+            <Button text="LIMPIAR SELECCIÓN" onAction="#handleLimpiarSeleccion" maxWidth="Infinity"/>
+        </VBox>
+    </right>
+</BorderPane>
