@@ -3,8 +3,8 @@ package LectorJSON;
 import org.json.JSONArray;
 //import org.json.JSONException;
 import org.json.JSONObject;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import org.json.JSONTokener;
+import java.io.InputStream;
 import java.util.*;
 //notas: debo cambiar todas las arrayList por las clases de listas enlazadas de la catedra y cargar todas las coordenadas de las calles para dibujar el mapa
 public class LectorJson {
@@ -13,8 +13,17 @@ public class LectorJson {
 
     public LectorJson(String ruta) throws Exception {
 
-        String contenido = new String(Files.readAllBytes(Paths.get(ruta)));
-        json = new JSONObject(contenido);
+        // 1. Buscamos el archivo empaquetado dentro de Maven
+        InputStream is = getClass().getResourceAsStream(ruta);
+
+        // 2. Validación de seguridad (siempre hay que atajarse por si el archivo no está)
+        if (is == null) {
+            throw new RuntimeException("¡Error crítico! No se pudo encontrar el recurso: " + ruta + " dentro de la carpeta resources.");
+        }
+
+        // 3. Le pasamos el flujo de datos directamente al lector de JSON
+        JSONTokener tokener = new JSONTokener(is);
+        this.json = new JSONObject(tokener);
     }
 
     public DatosMapa generarDatosMapa() throws Exception {
