@@ -13,12 +13,12 @@ import javafx.stage.Stage;
 public class TestGUI extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception{
-        String ruta = "D:/GitProyecto/Project/src/main/resources/5Cuadras.json";
+        String ruta = "D:/Santi/Materias 2do/AyED/TPI FINAL/proyectoAyEDFinal/src/main/resources/5Cuadras.json";
         LectorJson lector = new LectorJson(ruta);
         DatosMapa datos = lector.generarDatosMapa();
         GrafoMapa grafo = new GrafoMapa(datos.getCantidadVertices(), datos);
         grafo.cargarGrafo();
-        FXMLLoader loader = new FXMLLoader(getClass().getResourceAsStream("/ventana.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/ventana.fxml"));
         Parent root = loader.load(); 
         
         ControladorGUI controlador = loader.getController();

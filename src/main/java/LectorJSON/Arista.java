@@ -4,17 +4,15 @@ public class Arista {
     private Vertice origen;
     private Vertice destino;
     private Calle calle;
-    private double peso;
-  /*   private double distancia;
-    private double tiempo; */
+    private double peso; //calculado en segundos
+    private double distancia; //calculado en metros
 
-    public Arista(Vertice origen,Vertice destino,Calle calle) {
+    public Arista(Vertice origen,Vertice destino,Calle calle, double peso, double distancia) {
         this.origen = origen;
         this.destino = destino;
         this.calle = calle;
-        this.peso = calle.getVelocidadMaxima() / 3.6;
-     /*    this.distancia = distancia;
-        this.tiempo = tiempo; */
+        this.peso = peso;
+        this.distancia = distancia;
     }
 
     public double getPeso(){
@@ -32,5 +30,6 @@ public class Arista {
      public Vertice getDestino (){
         return this.destino;
     }
+    public double getDistancia(){ return this.distancia;}
  
 }

@@ -168,35 +168,59 @@ public class LectorJson {
                 String nombre = tags.optString("name", "S/N");
                 String tipo = tags.optString("highway", "unknown");
                 int velocidad =tags.optInt("maxspeed", obtenerVelocidadPorDefecto(tipo));
+                // Convertimos la velocidad de Km/h a Metros por Segundo (m/s) dividiendo por 3.6
+                double velocidadMS = velocidad / 3.6;
                 Calle calle =new Calle(obj.getLong("id"), nombre, oneway,velocidad,tipo);
 
 
                 long ultimoVertice = -1;
+                // Variables para calcular la distancia acumulada de la cuadra
+                double distanciaAcumulada = 0.0;
+                Coordenada coordAnterior = null;
                 for (int j = 0; j < nodes.length();j++) {
                     long actual = nodes.getLong(j);
+                    Coordenada coordActual = coordenadasNodos1.get(actual);
+
+                    // 2. ACUMULAR DISTANCIA: Sumamos la distancia desde el nodo anterior al actual
+                    // Esto incluye los "nodos curvos" del medio para que la longitud sea perfecta.
+                    if (coordAnterior != null && coordActual != null) {
+                        distanciaAcumulada += calcularDistanciaHaversine(coordAnterior, coordActual);
+                    }
+                    // Avanzamos el puntero de coordenadas
+                    coordAnterior = coordActual;
+
                     boolean esVertice = vertices.containsKey(actual);
 
                     if (!esVertice) {
-                        continue;
+                        continue;// Si no es una esquina, pasamos al siguiente nodo de la cuadra
                     }
 
                     // primer vertice del 'way'/tramo
                     if (ultimoVertice == -1) {
                         ultimoVertice = actual;
+                        distanciaAcumulada = 0.0; // Reseteamos la distancia desde esta esquina inicial
                         continue;
                     }
                     Vertice verticeU = vertices.get(ultimoVertice);
                     Vertice verticeV = vertices.get(actual);
+                    // CALCULAR EL PESO (ETA)
+                    // FÍSICA: Tiempo (segundos) = Distancia (metros) / Velocidad (m/s)
+                    double tiempoEtaSegundos = distanciaAcumulada / velocidadMS;
 
                     verticeU.agregarCalle(calle);
                     verticeV.agregarCalle(calle);
-                    
-                    listaAristas.add(new Arista(verticeU, verticeV, calle));
-                    // doble mano
+
+                    // 4. GUARDAR LA ARISTA CON SUS NUEVOS VALORES CALCULADOS
+                    listaAristas.add(new Arista(verticeU, verticeV, calle, distanciaAcumulada, tiempoEtaSegundos));
+
+                    // Si es doble mano, agregamos el viaje de vuelta (con el mismo peso/tiempo)
                     if (!oneway) {
-                        listaAristas.add(new Arista(verticeV, verticeU, calle));
+                        listaAristas.add(new Arista(verticeV, verticeU, calle, distanciaAcumulada, tiempoEtaSegundos));
                     }
+
+                    // Nos preparamos para la siguiente cuadra de la misma calle
                     ultimoVertice = actual;
+                    distanciaAcumulada = 0.0; // Reseteamos la distancia para empezar la próxima cuadra
                 }
             }
         }
@@ -216,5 +240,24 @@ public class LectorJson {
             default: vel = 30;break;
         }
         return vel;
+    }
+    private double calcularDistanciaHaversine(Coordenada c1, Coordenada c2) {
+        if (!c1.esValida() || !c2.esValida()) return 0.0;
+
+        final int R = 6371000; // Radio de la Tierra en metros
+        double lat1 = Math.toRadians(c1.getLatitud());
+        double lon1 = Math.toRadians(c1.getLongitud());
+        double lat2 = Math.toRadians(c2.getLatitud());
+        double lon2 = Math.toRadians(c2.getLongitud());
+
+        double dLat = lat2 - lat1;
+        double dLon = lon2 - lon1;
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Devuelve la distancia en metros
     }
 }
