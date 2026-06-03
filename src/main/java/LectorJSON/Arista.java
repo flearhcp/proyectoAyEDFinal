@@ -1,20 +1,22 @@
 package LectorJSON;
 
+import java.util.List;
+
 public class Arista {
     private Vertice origen;
     private Vertice destino;
     private Calle calle;
     private double peso;
-  /*   private double distancia;
-    private double tiempo; */
+    private double distancia;
+    private List<Coordenada> geometria;
 
-    public Arista(Vertice origen,Vertice destino,Calle calle) {
+    public Arista(Vertice origen,Vertice destino,Calle calle,double peso,double distancia, List<Coordenada> geometria) {
         this.origen = origen;
         this.destino = destino;
         this.calle = calle;
-        this.peso = calle.getVelocidadMaxima() / 3.6;
-     /*    this.distancia = distancia;
-        this.tiempo = tiempo; */
+        this.peso = peso;
+        this.distancia = distancia;
+        this.geometria = geometria;
     }
 
     public double getPeso(){
@@ -29,8 +31,11 @@ public class Arista {
         return this.origen;
     }
 
-     public Vertice getDestino (){
+    public Vertice getDestino (){
         return this.destino;
     }
- 
+
+    public double getDistancia(){ return this.distancia;}
+
+    public List<Coordenada> getGeometria(){ return this.geometria;}
 }
