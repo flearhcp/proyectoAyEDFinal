@@ -16,6 +16,7 @@ import javafx.util.Duration;
 import javafx.scene.image.Image;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
+import javafx.concurrent.Task;
 
 //Otras librerias
 
@@ -50,7 +51,7 @@ public class ControladorGUI implements Initializable{
     private double mouseAnchorX;
     private double offsetX = 0.0;
     private double offsetY = 0.0;
-    private double factorZoom = 0.0;
+    private double factorZoom = 1.0;
 
     @Override
     public void initialize(URL location, ResourceBundle resource){
@@ -111,8 +112,8 @@ public class ControladorGUI implements Initializable{
             Vehiculo v = (Vehiculo) this.flota.devolver(i);
             Vertice nodoV = datos.getVerticePorIndice(v.getVerticeIndiceOrigen());
             if (nodoV != null) {
-                double xV = mapOffsetX + ((nodoV.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                double yV = mapOffsetY + (mapMaxLat - nodoV.getLatitud()) * mapScale;
+                double xV = (mapOffsetX + ((nodoV.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                double yV = (mapOffsetY + (mapMaxLat - nodoV.getLatitud()) * mapScale) * factorZoom + offsetY;
                 
                 // Le damos un pequeño margen (6 píxeles) para que sea fácil apuntar con el ratón
                 if (Math.abs(mouseX - xV) <= 6 && Math.abs(mouseY - yV) <= 6) {
@@ -129,8 +130,8 @@ public class ControladorGUI implements Initializable{
         if (!hover && this.pasajeroActual != null) {
             Vertice nodoP = datos.getVerticePorIndice(this.pasajeroActual.getVerticeIDOrigen());
             if (nodoP != null) {
-                double xP = mapOffsetX + ((nodoP.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                double yP = mapOffsetY + (mapMaxLat - nodoP.getLatitud()) * mapScale;
+                double xP = (mapOffsetX + ((nodoP.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                double yP = (mapOffsetY + (mapMaxLat - nodoP.getLatitud()) * mapScale) * factorZoom + offsetY;
                 
                 if (Math.abs(mouseX - xP) <= 6 && Math.abs(mouseY - yP) <= 6) {
                     tooltipMapa.setText("Pasajero (Destino)");
@@ -165,39 +166,47 @@ public class ControladorGUI implements Initializable{
             return;
         }
         
-        ResultadoDespacho resultado;
-        
-        this.pasajeroActual = motor.usuarioRandom();
-        resultado = motor.despacharViaje(this.pasajeroActual, this.flota); // Reutilizamos la flota global
-        
         listaDespacho.getItems().clear();
-        Vehiculo asignado = resultado.getVehiculoAsignado();
-        
-        if (asignado != null) {
-            listaDespacho.getItems().add("1. Vehiculo: " + asignado.getID() + " - ETA: " + String.format("%.2f", asignado.getETA()) + " (Asignado)");
+        listaDespacho.getItems().add("Calculando despacho...");
 
-            ColaPrioridad<Vehiculo> cola = resultado.getVehiculosCandidatos();
-            int i = 2;
-            while (!cola.estaVacia()) {
-                Vehiculo v = cola.sacar();
-                listaDespacho.getItems().add(i + ". Vehiculo: " + v.getID() + " - ETA: " + String.format("%.2f", v.getETA()));
-                i++;
+        // Creamos una tarea para no bloquear el hilo principal (UI)
+        Task<ResultadoDespacho> taskDespacho = new Task<>() {
+            @Override
+            protected ResultadoDespacho call() throws Exception {
+                pasajeroActual = motor.usuarioRandom();
+                return motor.despacharViaje(pasajeroActual, flota);
             }
+        };
+
+        taskDespacho.setOnSucceeded(event -> {
+            ResultadoDespacho resultado = taskDespacho.getValue();
+            listaDespacho.getItems().clear();
+            Vehiculo asignado = resultado.getVehiculoAsignado();
             
-            // Obtenemos el camino. 
-            // NOTA: Ajustar "getPosicion()" al nombre real del método de tu clase Vehiculo que devuelve el índice.
-            int posVehiculo = asignado.getVerticeIndiceOrigen(); 
-            this.caminoResaltado = grafo.caminoDijkstra(posVehiculo, this.pasajeroActual.getVerticeIDOrigen());
-            
-            Usuario pasajeroAsignado = this.pasajeroActual; // Capturamos la referencia del pasajero
-            iniciarAnimacionViaje(asignado, pasajeroAsignado, this.caminoResaltado);
-        } else {
-            listaDespacho.getItems().add("No hay vehículos disponibles en este momento.");
-            this.pasajeroActual = null; // Anulamos el pasajero si ningún coche le fue asignado
-        }
-        
-        mostrarVehiculosDisponibles(); // Actualizamos la lista con los nuevos estados
-        dibujarGrafo(); // Redibujamos el Canvas para que se grafique la ruta
+            if (asignado != null) {
+                listaDespacho.getItems().add("1. Vehiculo: " + asignado.getID() + " - ETA: " + String.format("%.2f", asignado.getETA()) + " (Asignado)");
+                
+                ColaPrioridad<Vehiculo> cola = resultado.getVehiculosCandidatos();
+                int i = 2;
+                while (!cola.estaVacia()) {
+                    Vehiculo v = cola.sacar();
+                    listaDespacho.getItems().add(i + ". Vehiculo: " + v.getID() + " - ETA: " + String.format("%.2f", v.getETA()));
+                    i++;
+                }
+                
+                this.caminoResaltado = grafo.caminoDijkstra(asignado.getVerticeIndiceOrigen(), this.pasajeroActual.getVerticeIDOrigen());
+                iniciarAnimacionViaje(asignado, this.pasajeroActual, this.caminoResaltado);
+            } else {
+                listaDespacho.getItems().add("No hay vehículos disponibles.");
+                this.pasajeroActual = null;
+            }
+            mostrarVehiculosDisponibles();
+            dibujarGrafo();
+        });
+
+        taskDespacho.setOnFailed(e -> System.err.println("Error en el despacho: " + taskDespacho.getException().getMessage()));
+
+        new Thread(taskDespacho).start();
     }
 
     private void iniciarAnimacionViaje(Vehiculo vehiculo, Usuario pasajero, ListaDoubleLinkedL rutaHaciaPasajero) {
@@ -301,12 +310,12 @@ public class ControladorGUI implements Initializable{
         }
         if(imagenFondo != null){
             double anchoGrafoPixeles,altoGrafoPixeles;
-            anchoGrafoPixeles = (this.datos.getMaxLon() - this.mapMinLon) * mapFactorLon * mapScale;
-            altoGrafoPixeles = (mapMaxLat - this.datos.getMinLat()) * mapScale;
-            gc.drawImage(imagenFondo, mapOffsetX, mapOffsetY,anchoGrafoPixeles,altoGrafoPixeles);
+            anchoGrafoPixeles = (this.datos.getMaxLon() - this.mapMinLon) * mapFactorLon * mapScale * factorZoom;
+            altoGrafoPixeles = (mapMaxLat - this.datos.getMinLat()) * mapScale * factorZoom;
+            gc.drawImage(imagenFondo, mapOffsetX * factorZoom + offsetX, mapOffsetY * factorZoom + offsetY, anchoGrafoPixeles, altoGrafoPixeles);
         }
         dibujarAristas(gc);
-        dibujarNodos(gc);
+        if (factorZoom > 2.0) dibujarNodos(gc); // Solo dibujar nodos si hay zoom suficiente para verlos
         dibujarCaminoResaltado(gc);
         dibujarFlota(gc);
         dibujarPasajero(gc);
@@ -345,30 +354,26 @@ public class ControladorGUI implements Initializable{
     private void dibujarAristas(GraphicsContext gc) {
         gc.setStroke(Color.GRAY);
         gc.setLineWidth(0.5);
+        gc.beginPath();
 
-        for (int i = 0; i < grafo.getOrden(); i++) {
-            ListaDoubleLinkedL adyacentes = grafo.getAdyacentes(i);
+        // Usamos la lista plana de DatosMapa para evitar el recorrido O(N) de la lista enlazada custom
+        for (Arista arco : datos.getAristas()) {
+            List<Coordenada> geometria = arco.getGeometria();
+            if (geometria != null && !geometria.isEmpty()) {
+                Coordenada c0 = geometria.get(0);
+                double x = (mapOffsetX + ((c0.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                double y = (mapOffsetY + (mapMaxLat - c0.getLatitud()) * mapScale) * factorZoom + offsetY;
+                gc.moveTo(x, y);
 
-            if (adyacentes == null) continue;
-
-            for (int j = 0; j < adyacentes.tamanio(); j++) {
-                Arista arco = (Arista) adyacentes.devolver(j);
-                List<Coordenada> geometria = arco.getGeometria();
-                if(geometria != null && !geometria.isEmpty()){
-                    Coordenada inicio = geometria.get(0);
-                    double x1 = mapOffsetX + ((inicio.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                    double y1 = mapOffsetY + (mapMaxLat - inicio.getLatitud()) * mapScale;
-                    gc.moveTo(x1,y1);
-                    for (int k = 1; k < geometria.size(); k++) {
-                        Coordenada c = geometria.get(k);
-                        double x2 = mapOffsetX + ((c.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                        double y2 = mapOffsetY + (mapMaxLat - c.getLatitud()) * mapScale;
-                        gc.lineTo(x2, y2);
-                    }
+                for (int k = 1; k < geometria.size(); k++) {
+                    Coordenada c = geometria.get(k);
+                    x = (mapOffsetX + ((c.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                    y = (mapOffsetY + (mapMaxLat - c.getLatitud()) * mapScale) * factorZoom + offsetY;
+                    gc.lineTo(x, y);
                 }
-                gc.stroke();
             }
         }
+        gc.stroke(); // Dibujamos todas las aristas de una sola vez
     }
 
     private void dibujarNodos(GraphicsContext gc) {
@@ -377,8 +382,8 @@ public class ControladorGUI implements Initializable{
             Vertice nodo = datos.getVerticePorIndice(i);
             if (nodo == null) continue;
 
-            double x = mapOffsetX + ((nodo.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-            double y = mapOffsetY + (mapMaxLat - nodo.getLatitud()) * mapScale;
+            double x = (mapOffsetX + ((nodo.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+            double y = (mapOffsetY + (mapMaxLat - nodo.getLatitud()) * mapScale) * factorZoom + offsetY;
             gc.fillOval(x - 1.5, y - 1.5, 3, 3);
         }
     }
@@ -396,10 +401,10 @@ public class ControladorGUI implements Initializable{
                 Vertice vD = datos.getVerticePorIndice(idDestino);
 
                 if (vO != null && vD != null) {
-                    double px1 = mapOffsetX + ((vO.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                    double py1 = mapOffsetY + (mapMaxLat - vO.getLatitud()) * mapScale;
-                    double px2 = mapOffsetX + ((vD.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                    double py2 = mapOffsetY + (mapMaxLat - vD.getLatitud()) * mapScale;
+                    double px1 = (mapOffsetX + ((vO.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                    double py1 = (mapOffsetY + (mapMaxLat - vO.getLatitud()) * mapScale) * factorZoom + offsetY;
+                    double px2 = (mapOffsetX + ((vD.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                    double py2 = (mapOffsetY + (mapMaxLat - vD.getLatitud()) * mapScale) * factorZoom + offsetY;
                     gc.strokeLine(px1, py1, px2, py2);
                 }
             }
@@ -417,8 +422,8 @@ public class ControladorGUI implements Initializable{
                 }
                 Vertice nodoV = datos.getVerticePorIndice(v.getVerticeIndiceOrigen());
                 if (nodoV != null) {
-                    double xV = mapOffsetX + ((nodoV.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                    double yV = mapOffsetY + (mapMaxLat - nodoV.getLatitud()) * mapScale;
+                    double xV = (mapOffsetX + ((nodoV.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                    double yV = (mapOffsetY + (mapMaxLat - nodoV.getLatitud()) * mapScale) * factorZoom + offsetY;
                     gc.fillOval(xV - 3, yV - 3, 6, 6);
                 }
             }
@@ -430,8 +435,8 @@ public class ControladorGUI implements Initializable{
             gc.setFill(Color.YELLOW);
             Vertice nodoP = datos.getVerticePorIndice(this.pasajeroActual.getVerticeIDOrigen());
             if (nodoP != null) {
-                double xP = mapOffsetX + ((nodoP.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                double yP = mapOffsetY + (mapMaxLat - nodoP.getLatitud()) * mapScale;
+                double xP = (mapOffsetX + ((nodoP.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
+                double yP = (mapOffsetY + (mapMaxLat - nodoP.getLatitud()) * mapScale) * factorZoom + offsetY;
                 gc.fillOval(xP - 4, yP - 4, 8, 8);
             }
         }
