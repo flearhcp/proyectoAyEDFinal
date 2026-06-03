@@ -24,6 +24,8 @@
             
             <Button text="NUEVA SOLICITUD" onAction="#handleNuevaSolicitud" maxWidth="Infinity" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
             <Button text="LIMPIAR SELECCIÓN" onAction="#handleLimpiarSeleccion" maxWidth="Infinity"/>
+            <Button text="Agregar Vehículo" onAction="#handleAgregarVehiculo" maxWidth="Infinity" style="-fx-background-color: #555555; -fx-text-fill: white;"/>
+            <Button text="Agregar Pasajero" onAction="#handleAgregarPasajero" maxWidth="Infinity" style="-fx-background-color: #555555; -fx-text-fill: white;"/>
         </VBox>
     </right>
 </BorderPane>

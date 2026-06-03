@@ -37,6 +37,10 @@ public class ControladorGUI implements Initializable{
     private ListaDoubleLinkedL caminoResaltado;
     private ListaDoubleLinkedL flota; // Guardamos la flota a nivel de clase para reutilizarla
     private Usuario pasajeroActual; // Guardamos el pasajero actual para dibujarlo
+    private int colocar = 0; /* Este atributo controla si se coloca un vehiculo o usuario en
+    en mapa, cuando esta en 0 no coloca nada*/
+    private int origenPasajero = -1; /* este atributo guarda el vertice en donde colocamos al pasajero cuando
+    hacemos click por primera vez*/
     
     // Variables para mapear coordenadas del mouse con el Canvas
     private Tooltip tooltipMapa;
@@ -54,6 +58,7 @@ public class ControladorGUI implements Initializable{
         }
         tooltipMapa = new Tooltip();
         canvasMapa.setOnMouseMoved(this::handleMouseMoved);
+        canvasMapa.setOnMouseClicked(this::handleMouseClicked);
         canvasMapa.setOnMouseExited(e -> tooltipMapa.hide());
     }
 
@@ -127,8 +132,10 @@ public class ControladorGUI implements Initializable{
         }
         
         ResultadoDespacho resultado;
-        
-        this.pasajeroActual = motor.usuarioRandom();
+
+        if (this.pasajeroActual == null) {
+            this.pasajeroActual = motor.usuarioRandom();
+        }
         resultado = motor.despacharViaje(this.pasajeroActual, this.flota); // Reutilizamos la flota global
         
         listaDespacho.getItems().clear();
@@ -227,6 +234,17 @@ public class ControladorGUI implements Initializable{
         
         mostrarVehiculosDisponibles();
         dibujarGrafo();
+    }
+    @FXML
+    private void handleAgregarVehiculo() {
+        this.colocar = 1;
+        System.out.println("MODO: Selecciona un vértice para colocar el Vehículo.");
+    }
+
+    @FXML
+    private void handleAgregarPasajero() {
+        this.colocar = 2;
+        System.out.println("MODO: Selecciona un vértice para el ORIGEN del pasajero.");
     }
     public void setGrafoyDatos(GrafoMapa grafo, DatosMapa datos){
         this.grafo = grafo;
@@ -395,5 +413,67 @@ public class ControladorGUI implements Initializable{
             }
         }
     }
-    
+    private void handleMouseClicked(MouseEvent event) {
+        if (this.colocar == 0 || this.datos == null) return;
+
+        double mouseX = event.getX();
+        double mouseY = event.getY();
+        Vertice verticeClickeado = null;
+
+        for (int i = 0; i < datos.getCantidadVertices(); i++) {
+            Vertice nodo = datos.getVerticePorIndice(i);
+
+            if (nodo != null) {
+                double xNodo = mapOffsetX + ((nodo.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
+                double yNodo = mapOffsetY + (mapMaxLat - nodo.getLatitud()) * mapScale;
+
+                if (Math.abs(mouseX - xNodo) <= 6 && Math.abs(mouseY - yNodo) <= 6) {
+                    verticeClickeado = nodo;
+                    break;
+                }
+            }
+        }
+
+        if (verticeClickeado == null) return;
+
+        if (this.colocar == 1) {
+            // --- AGREGAR VEHICULO ---
+            // Le pasamos un 'int' arbitrario. Tu constructor lo va a ignorar
+            // internamente y va a generar la patente con setID().
+            int idArbitrario = this.flota.tamanio() + 1000;
+
+            // Usamos tu constructor (int ID, int posOrigen)
+            Vehiculo nuevoVehiculo = new Vehiculo(idArbitrario, verticeClickeado.getIndice());
+
+            this.flota.insertar(nuevoVehiculo, this.flota.tamanio());
+            System.out.println("Vehículo agregado en nodo: " + verticeClickeado.getIndice() + " con patente: " + nuevoVehiculo.getID());
+
+            this.colocar = 0;
+            mostrarVehiculosDisponibles();
+            dibujarGrafo();
+
+        } else if (this.colocar == 2) {
+            // --- AGREGAR ORIGEN DEL PASAJERO ---
+            this.origenPasajero = verticeClickeado.getIndice();
+            System.out.println("Origen fijado en nodo: " + this.origenPasajero + ". Selecciona el destino.");
+            this.colocar = 3;
+
+        } else if (this.colocar == 3) {
+            // --- AGREGAR DESTINO DEL PASAJERO ---
+            if (this.origenPasajero == verticeClickeado.getIndice()) {
+                System.out.println("El destino debe ser diferente al origen. Elige otro.");
+                return;
+            }
+            // Generamos un ID aleatorio único (ej. entre 1000 y 9999) para el nuevo pasajero manual
+            int idUsuarioManual = (int) (Math.random() * 9000) + 1000;
+            this.pasajeroActual = new Usuario(idUsuarioManual, this.origenPasajero, verticeClickeado.getIndice());
+
+            System.out.println("Pasajero listo para viajar.");
+
+            this.colocar = 0;
+            this.origenPasajero = -1;
+            dibujarGrafo();
+        }
+    }
+
 }
