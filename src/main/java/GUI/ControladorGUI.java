@@ -20,6 +20,8 @@ import javafx.animation.KeyFrame;
 //Otras librerias
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 import Grafos.GrafoMapa;
 import LectorJSON.*;
@@ -40,7 +42,15 @@ public class ControladorGUI implements Initializable{
     
     // Variables para mapear coordenadas del mouse con el Canvas
     private Tooltip tooltipMapa;
-    private double mapScale, mapOffsetX, mapOffsetY, mapFactorLon, mapMinLon, mapMaxLat;
+    private double mapScale, mapFactorLon, mapMinLon, mapMaxLat;
+    private double mapOffsetX;
+    private double mapOffsetY;
+    //Para zoom
+    private double mouseAnchorY;
+    private double mouseAnchorX;
+    private double offsetX = 0.0;
+    private double offsetY = 0.0;
+    private double factorZoom = 0.0;
 
     @Override
     public void initialize(URL location, ResourceBundle resource){
@@ -55,6 +65,35 @@ public class ControladorGUI implements Initializable{
         tooltipMapa = new Tooltip();
         canvasMapa.setOnMouseMoved(this::handleMouseMoved);
         canvasMapa.setOnMouseExited(e -> tooltipMapa.hide());
+        canvasMapa.setOnScroll(event -> {
+            double factor = 1.1;
+            if (event.getDeltaY() < 0){
+                factor = 1/factor; //Zoom Out
+            }
+            factorZoom *= factor;
+
+            //limitamos el zoom
+            if (factorZoom<0.5) factorZoom =0.5;
+            if (factorZoom> 20.0) factorZoom = 20.0;
+
+            dibujarGrafo();
+        });
+
+        //eventos de paneo
+        canvasMapa.setOnMousePressed(event -> {
+            mouseAnchorX = event.getX();
+            mouseAnchorY = event.getY();
+        });
+
+        canvasMapa.setOnMouseDragged(event ->{
+            offsetX += (event.getX() -mouseAnchorX);
+            offsetY += (event.getY() - mouseAnchorY);
+
+            mouseAnchorX = event.getX();
+            mouseAnchorY = event.getY();
+
+            dibujarGrafo();
+        });
     }
 
     private void handleMouseMoved(MouseEvent event) {
@@ -299,7 +338,7 @@ public class ControladorGUI implements Initializable{
 
         this.mapOffsetX = padding + (usableW - (diffLonAjustada * this.mapScale)) / 2.0;
         this.mapOffsetY = padding + (usableH - (diffLat * this.mapScale)) / 2.0;
-        System.out.println("MaxLat: "+ this.mapMaxLat + " MaxLon: "+ maxLon + "\nMinLat: "+minLat+" MinLon: "+this.mapMinLon);
+        //System.out.println("MaxLat: "+ this.mapMaxLat + " MaxLon: "+ maxLon + "\nMinLat: "+minLat+" MinLon: "+this.mapMinLon);
         return true;
     }
 
@@ -308,24 +347,26 @@ public class ControladorGUI implements Initializable{
         gc.setLineWidth(0.5);
 
         for (int i = 0; i < grafo.getOrden(); i++) {
-            Vertice origen = datos.getVerticePorIndice(i);
-            if (origen == null) continue;
-
-            double x1 = mapOffsetX + ((origen.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-            double y1 = mapOffsetY + (mapMaxLat - origen.getLatitud()) * mapScale;
-
             ListaDoubleLinkedL adyacentes = grafo.getAdyacentes(i);
+
             if (adyacentes == null) continue;
 
             for (int j = 0; j < adyacentes.tamanio(); j++) {
                 Arista arco = (Arista) adyacentes.devolver(j);
-                Vertice destino = datos.getVerticePorIndice(arco.getDestino().getIndice());
-                if (destino == null) continue;
-
-                double x2 = mapOffsetX + ((destino.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
-                double y2 = mapOffsetY + (mapMaxLat - destino.getLatitud()) * mapScale;
-
-                gc.strokeLine(x1, y1, x2, y2);
+                List<Coordenada> geometria = arco.getGeometria();
+                if(geometria != null && !geometria.isEmpty()){
+                    Coordenada inicio = geometria.get(0);
+                    double x1 = mapOffsetX + ((inicio.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
+                    double y1 = mapOffsetY + (mapMaxLat - inicio.getLatitud()) * mapScale;
+                    gc.moveTo(x1,y1);
+                    for (int k = 1; k < geometria.size(); k++) {
+                        Coordenada c = geometria.get(k);
+                        double x2 = mapOffsetX + ((c.getLongitud() - mapMinLon) * mapFactorLon) * mapScale;
+                        double y2 = mapOffsetY + (mapMaxLat - c.getLatitud()) * mapScale;
+                        gc.lineTo(x2, y2);
+                    }
+                }
+                gc.stroke();
             }
         }
     }

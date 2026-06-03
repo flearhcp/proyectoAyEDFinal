@@ -13,99 +13,21 @@ public class LectorJson {
 
     public LectorJson(String ruta) throws Exception {
 
-        // 1. Buscamos el archivo empaquetado dentro de Maven
         InputStream is = getClass().getResourceAsStream(ruta);
-
-        // 2. Validación de seguridad (siempre hay que atajarse por si el archivo no está)
-        if (is == null) {
-            throw new RuntimeException("¡Error crítico! No se pudo encontrar el recurso: " + ruta + " dentro de la carpeta resources.");
+        if(is == null){
+            throw  new RuntimeException("¡Error critico! No se pudo cargar el recurso: "+ ruta+"dentro de la carpeta resources");
         }
-
-        // 3. Le pasamos el flujo de datos directamente al lector de JSON
         JSONTokener tokener = new JSONTokener(is);
         this.json = new JSONObject(tokener);
     }
 
     public DatosMapa generarDatosMapa() throws Exception {
-        //Actualizaciones: Con esta actualizacion los nodos se cargan sin que se repita las calles.
         JSONArray elements = json.getJSONArray("elements");
-        /*JSONArray elementsOriginales = json.getJSONArray("elements");
-        Map<Long, JSONObject> coordenadasNodos = new HashMap<>();
-        List<JSONObject> listaWays = new ArrayList<>();
-        Map<Long,Coordenada> coordenadasNodos1 = new HashMap<>();
 
-        for (int i = 0; i < elementsOriginales.length(); i++) {
-            JSONObject obj = elementsOriginales.getJSONObject(i);
-            String type = obj.getString("type");
-            
-            if (type.equals("node")) {
-                long nodeId = obj.getLong("id");
-                double latitud = obj.getDouble("lat");
-                double longitud = obj.getDouble("lon");
-                coordenadasNodos1.put(nodeId, new Coordenada(latitud, longitud));
-                coordenadasNodos.put(nodeId, obj); // Guardamos el nodo completo
-            } else if (type.equals("way") && obj.has("tags")) {
-                JSONObject tags = obj.getJSONObject("tags");
-                if (tags.has("name")) {
-                    listaWays.add(obj);
-                }
-            }
-        }
-
-        // 2. UNIFICAR TRAMOS POR NOMBRE
-        Map<String, List<JSONObject>> callesAgrupadas = new HashMap<>();
-        for (JSONObject way : listaWays) {
-            String nombre = way.getJSONObject("tags").getString("name");
-            callesAgrupadas.computeIfAbsent(nombre, k -> new ArrayList<>()).add(way);
-        }
-
-        // Reconstruimos el JSONArray de elementos pero ya unificados
-        JSONArray elements = new JSONArray();
-
-        callesAgrupadas.forEach((nombreCalle, tramos) -> {
-            JSONObject calleUnificada = new JSONObject();
-            try {
-                calleUnificada.put("type", "way");
-                calleUnificada.put("id", tramos.get(0).getLong("id")); // Mantiene el primer ID
-                
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            // Fusionar nodos secuencialmente evitando duplicados en empalmes
-            List<Long> nodosFusionados = new ArrayList<>();
-            for (JSONObject tramo : tramos) {
-                JSONArray nodesTramo = new JSONArray();
-                try {
-                    nodesTramo = tramo.getJSONArray("nodes");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                for (int j = 0; j < nodesTramo.length(); j++) {
-                    long idNodo;
-                    try {
-                        idNodo = nodesTramo.getLong(j);
-                        if (nodosFusionados.isEmpty() || nodosFusionados.get(nodosFusionados.size() - 1) != idNodo) {
-                            nodosFusionados.add(idNodo);
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            try {
-                calleUnificada.put("nodes", new JSONArray(nodosFusionados));
-                calleUnificada.put("tags", tramos.get(0).getJSONObject("tags")); // Conserva tags base
-                elements.put(calleUnificada);
-                
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-            */
         // CONTAR APARICIONES DE NODOS
         Map<Long, Integer> apariciones = new HashMap<>();
         Map<Long,Coordenada> coordenadasNodos1 = new HashMap<>();
+        List<JSONObject> listaWays = new ArrayList<>();
 
         for (int i = 0; i < elements.length(); i++) {
             JSONObject obj = elements.getJSONObject(i);
@@ -166,6 +88,7 @@ public class LectorJson {
 
         // CREAR aristas
         List <Arista> listaAristas = new ArrayList<>();
+        Map<String,Calle> diccionarioCalles = new HashMap<>();
 
         for (int i = 0; i < elements.length(); i++) {
             JSONObject obj = elements.getJSONObject(i);
@@ -173,17 +96,32 @@ public class LectorJson {
             if (obj.getString("type").equals("way")) {
                 JSONArray nodes = obj.getJSONArray("nodes");
                 JSONObject tags = obj.optJSONObject("tags");
+                //Normalizacion del nombre
+                String nombreOriginal = (tags != null) ? tags.optString("name","Calle sin nombre"): "Calle sin nombre";
+                String nombreNorm = normalizarNombre(nombreOriginal);
+
                 boolean oneway = tags.optString("oneway", "no").equals("yes");
-                String nombre = tags.optString("name", "S/N");
                 String tipo = tags.optString("highway", "unknown");
                 int velocidad =tags.optInt("maxspeed", obtenerVelocidadPorDefecto(tipo));
-                Calle calle =new Calle(obj.getLong("id"), nombre, oneway,velocidad,tipo);
+                double velocidadMs = velocidad / 3.6;
+                Calle calle = diccionarioCalles.computeIfAbsent(nombreNorm, k -> new Calle(obj.optLong("id"),nombreNorm,oneway,velocidad,tipo));
 
 
                 long ultimoVertice = -1;
+                int indiceUltimoVertice = 0;
+
+                double distanciaAcumulada = 0.0;
+                Coordenada coorAnterior = null;
+
                 for (int j = 0; j < nodes.length();j++) {
                     long actual = nodes.getLong(j);
                     boolean esVertice = vertices.containsKey(actual);
+                    Coordenada coordActual = coordenadasNodos1.get(actual);
+
+                    if (coorAnterior != null && coordActual != null){
+                        distanciaAcumulada += calcularDistanciaHaversine(coorAnterior,coordActual);
+                    }
+                    coorAnterior = coordActual;
 
                     if (!esVertice) {
                         continue;
@@ -192,18 +130,28 @@ public class LectorJson {
                     // primer vertice del 'way'/tramo
                     if (ultimoVertice == -1) {
                         ultimoVertice = actual;
+                        distanciaAcumulada = 0.0;
                         continue;
+                    }
+                    List<Coordenada> geometriaTramo = new ArrayList<>();
+                    for (int k = indiceUltimoVertice; k < j; k++) {
+                        long idNodo = nodes.getLong(k);
+                        geometriaTramo.add(coordenadasNodos1.get(idNodo));
                     }
                     Vertice verticeU = vertices.get(ultimoVertice);
                     Vertice verticeV = vertices.get(actual);
 
+                    double tiempoETASegundos = distanciaAcumulada / velocidadMs;
+
                     verticeU.agregarCalle(calle);
                     verticeV.agregarCalle(calle);
                     
-                    listaAristas.add(new Arista(verticeU, verticeV, calle));
+                    listaAristas.add(new Arista(verticeU, verticeV, calle,distanciaAcumulada,tiempoETASegundos,geometriaTramo));
                     // doble mano
                     if (!oneway) {
-                        listaAristas.add(new Arista(verticeV, verticeU, calle));
+                        List<Coordenada> geometriaInvertida = new ArrayList<>(geometriaTramo);
+                        Collections.reverse(geometriaInvertida);
+                        listaAristas.add(new Arista(verticeV, verticeU, calle,distanciaAcumulada,tiempoETASegundos,geometriaInvertida));
                     }
                     ultimoVertice = actual;
                 }
@@ -225,5 +173,35 @@ public class LectorJson {
             default: vel = 30;break;
         }
         return vel;
+    }
+    private String normalizarNombre (String nombre){
+        if(nombre == null) return "Desconocida";
+
+        String norm = nombre.toLowerCase().trim().replaceAll("\\s+"," ");
+        norm = norm.replace("av.","avenida");
+        norm = norm.replace("av ","avenida");
+        norm = norm.replace("gral.","general");
+        norm = norm.replace("pje.","pasaje");
+
+        return norm;
+    }
+    private double calcularDistanciaHaversine(Coordenada c1, Coordenada c2) {
+        if (!c1.esValida() || !c2.esValida()) return 0.0;
+
+        final int R = 6371000; // Radio de la Tierra en metros
+        double lat1 = Math.toRadians(c1.getLatitud());
+        double lon1 = Math.toRadians(c1.getLongitud());
+        double lat2 = Math.toRadians(c2.getLatitud());
+        double lon2 = Math.toRadians(c2.getLongitud());
+
+        double dLat = lat2 - lat1;
+        double dLon = lon2 - lon1;
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Devuelve la distancia en metros
     }
 }

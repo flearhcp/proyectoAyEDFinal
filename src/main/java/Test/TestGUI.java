@@ -4,7 +4,6 @@ import LectorJSON.*;
 import GUI.ControladorGUI;
 import Grafos.*;
 
-
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -14,12 +13,11 @@ import javafx.stage.Stage;
 public class TestGUI extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception{
-
-        LectorJson lector = new LectorJson("/5Cuadras.json");
+        String ruta = "/5Cuadras.json";
+        LectorJson lector = new LectorJson(ruta);
         DatosMapa datos = lector.generarDatosMapa();
         GrafoMapa grafo = new GrafoMapa(datos.getCantidadVertices(), datos);
         grafo.cargarGrafo();
-
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/ventana.fxml"));
         Parent root = loader.load(); 
         
