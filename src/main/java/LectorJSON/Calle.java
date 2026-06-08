@@ -7,14 +7,16 @@ public class Calle {
 
     private long osmId;
     private String nombre;
+    private String shortName;
     private boolean manoUnica;
     private int velocidadMaxima;
     private String tipo;
     private List<Coordenada> geometria;
 
-    public Calle( long osmId,String nombre,boolean manoUnica,int velocidadMaxima,String tipo) {
+    public Calle( long osmId,String nombre, String shortName, boolean manoUnica,int velocidadMaxima,String tipo) {
         this.osmId = osmId;
         this.nombre = nombre;
+        this.shortName = shortName;
         this.manoUnica = manoUnica;
         this.velocidadMaxima = velocidadMaxima;
         this.tipo = tipo;
@@ -26,6 +28,20 @@ public class Calle {
     }
     
     public String getNombre() {
+        return nombre;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    /**
+     * Devuelve el nombre corto si existe, de lo contrario devuelve el nombre completo.
+     */
+    public String getNombreAMostrar() {
+        if (shortName != null && !shortName.isEmpty()) {
+            return shortName;
+        }
         return nombre;
     }
 
