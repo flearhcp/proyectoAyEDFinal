@@ -38,4 +38,5 @@ public class Arista {
     public double getDistancia(){ return this.distancia;}
 
     public List<Coordenada> getGeometria(){ return this.geometria;}
+
 }

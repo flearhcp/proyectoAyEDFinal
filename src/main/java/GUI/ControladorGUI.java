@@ -64,7 +64,7 @@ public class ControladorGUI implements Initializable{
     private Usuario pasajeroActual; // Guardamos el pasajero actual para dibujarlo
     private boolean pasajeroRecogido; // Estado para alternar entre icono de pasajero y punto amarillo
     private boolean mostrarFondo = false; // Controla si se deben dibujar los tiles de OSM
-     private int colocar = 0; /* Este atributo controla si se coloca un vehiculo o usuario en
+    private int colocar = 0; /* Este atributo controla si se coloca un vehiculo o usuario en
     en mapa, cuando esta en 0 no coloca nada*/
     private int origenPasajero = -1; /* este atributo guarda el vertice en donde colocamos al pasajero cuando
     hacemos click por primera vez*/
@@ -314,11 +314,10 @@ public class ControladorGUI implements Initializable{
             System.err.println("El motor o la flota no han sido inicializados.");
             return;
         }
-        
+
         listaDespacho.getItems().clear();
         listaDespacho.getItems().add("Calculando despacho...");
 
-        // Creamos una tarea para no bloquear el hilo principal (UI)
         Task<ResultadoDespacho> taskDespacho = new Task<>() {
             @Override
             protected ResultadoDespacho call() throws Exception {
@@ -501,7 +500,6 @@ public class ControladorGUI implements Initializable{
         this.colocar = 2;
         System.out.println("MODO: Selecciona un vértice para el ORIGEN del pasajero.");
     }
-
     public void setGrafoyDatos(GrafoMapa grafo, DatosMapa datos){
         this.grafo = grafo;
         this.datos = datos;

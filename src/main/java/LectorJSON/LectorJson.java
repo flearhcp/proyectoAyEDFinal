@@ -113,56 +113,66 @@ public class LectorJson {
                 boolean oneway = tags.optString("oneway", "no").equals("yes");
                 String tipo = tags.optString("highway", "unknown");
                 int velocidad =tags.optInt("maxspeed", obtenerVelocidadPorDefecto(tipo));
-                double velocidadMs = velocidad / 3.6;
+                double velocidadMS = velocidad / 3.6;
                 Calle calle = diccionarioCalles.computeIfAbsent(nombreNorm, k -> new Calle(obj.optLong("id"), nombreNorm, shortName, oneway, velocidad, tipo));
-
 
                 long ultimoVertice = -1;
                 int indiceUltimoVertice = 0;
 
                 double distanciaAcumulada = 0.0;
-                Coordenada coorAnterior = null;
+
+                Coordenada coordAnterior = null;
 
                 for (int j = 0; j < nodes.length();j++) {
                     long actual = nodes.getLong(j);
-                    boolean esVertice = vertices.containsKey(actual);
-                    Coordenada coordActual = coordenadasNodos1.get(actual);
 
-                    if (coorAnterior != null && coordActual != null){
-                        distanciaAcumulada += calcularDistanciaHaversine(coorAnterior,coordActual);
+
+                    Coordenada coordActual = coordenadasNodos1.get(actual);
+                    if (coordAnterior != null && coordActual != null) {
+                        distanciaAcumulada += calcularDistanciaHaversine(coordAnterior, coordActual);
                     }
-                    coorAnterior = coordActual;
+                    coordAnterior = coordActual;
+
+                    boolean esVertice = vertices.containsKey(actual);
 
                     if (!esVertice) {
                         continue;
                     }
 
-                    // primer vertice del 'way'/tramo
                     if (ultimoVertice == -1) {
                         ultimoVertice = actual;
                         distanciaAcumulada = 0.0;
+                        indiceUltimoVertice = j;
                         continue;
                     }
+
+                    // Extraemos la geometría para dibujar las curvas en JavaFX
                     List<Coordenada> geometriaTramo = new ArrayList<>();
                     for (int k = indiceUltimoVertice; k <= j; k++) {
                         long idNodo = nodes.getLong(k);
                         geometriaTramo.add(coordenadasNodos1.get(idNodo));
                     }
+
                     Vertice verticeU = vertices.get(ultimoVertice);
                     Vertice verticeV = vertices.get(actual);
 
-                    double tiempoETASegundos = distanciaAcumulada / velocidadMs;
+
+                    double tiempoEtaSegundos = distanciaAcumulada / velocidadMS;
 
                     verticeU.agregarCalle(calle);
                     verticeV.agregarCalle(calle);
-                    
-                    listaAristas.add(new Arista(verticeU, verticeV, calle,distanciaAcumulada,tiempoETASegundos,geometriaTramo));
-                    // doble mano
+
+
+                    listaAristas.add(new Arista(verticeU, verticeV, calle, distanciaAcumulada, tiempoEtaSegundos, geometriaTramo));
+
+                    // Si es doble mano, invertimos la lista de coordenadas para la arista de vuelta
                     if (!oneway) {
                         List<Coordenada> geometriaInvertida = new ArrayList<>(geometriaTramo);
                         Collections.reverse(geometriaInvertida);
-                        listaAristas.add(new Arista(verticeV, verticeU, calle,distanciaAcumulada,tiempoETASegundos,geometriaInvertida));
+                        listaAristas.add(new Arista(verticeV, verticeU, calle, distanciaAcumulada, tiempoEtaSegundos, geometriaInvertida));
                     }
+
+                    // Nos preparamos para la siguiente cuadra de la misma calle
                     ultimoVertice = actual;
                     indiceUltimoVertice=j;
                     distanciaAcumulada= 0.0;
