@@ -52,7 +52,7 @@ public abstract class AbsGrafoD extends AbsGrafo implements OperacionesGD{
 	}
 	
 		
-	public ResultadoDijkstra Dijkstra(int startVertex){
+	/* public ResultadoDijkstra Dijkstra(int startVertex){
 		ListaDoubleLinkedL listaDistancia = new ListaDoubleLinkedL();
 		ListaDoubleLinkedL listaCamino = new ListaDoubleLinkedL();
 		ListaDoubleLinkedL listaSolucion = new ListaDoubleLinkedL();
@@ -98,8 +98,68 @@ public abstract class AbsGrafoD extends AbsGrafo implements OperacionesGD{
 			}
 		}
 		return new ResultadoDijkstra(listaDistancia, listaCamino, listaSolucion);
-	}
+	} */
 
+	public ResultadoDijkstra Dijkstra(int startVertex){
+		int n = getOrden();
+		// Usamos arreglos primitivos para velocidad O(1) en acceso
+		double[] distancias = new double[n];
+		int[] caminos = new int[n];
+		boolean[] visitado = new boolean[n];
+		
+		ColaPrioridad<NodoDistancia> pq = new ColaPrioridad<>();
+		
+		for (int i=0; i < n; i++){			
+			distancias[i] = infinito;
+			caminos[i] = -1;
+			visitado[i] = false;
+		}
+		
+		// El costo de llegar al punto de inicio es 0
+		
+		distancias[startVertex] = 0.0;
+		pq.meter(new NodoDistancia(startVertex, 0.0));
+		
+		// 3. Algoritmo de Dijkstra
+		while (!pq.estaVacia()) {
+			NodoDistancia actual = pq.sacar();
+			int minVertex = actual.vertice;
+			
+			// Si el vértice ya fue procesado, lo descartamos
+			if (visitado[minVertex]) {
+				continue;
+			}
+			// Marcamos el vértice como procesado (agregado al conjunto solución)
+			visitado[minVertex] = true;
+			
+			// Evaluamos todos sus adyacentes a través de la matriz de costo			
+			for (int v = 0; v < n; v++) {
+				if (!visitado[v]) {// Si el vecino no ha sido visitado
+					double arcCost = (double) this.matrizCosto.devolver(minVertex, v);
+					// Con matriz de adyacencia, debemos escanear todos los posibles vecinos
+					if (arcCost != infinito) { // Si existe una conexión entre ellos
+						// Relajación de Dijkstra
+						if (distancias[minVertex] + arcCost < distancias[v]) {
+							distancias[v] = distancias[minVertex] + arcCost;
+							caminos[v] = minVertex;
+							pq.meter(new NodoDistancia(v, distancias[v]));
+						}
+					}
+				}
+			}
+		}
+		// Convertimos los arreglos de vuelta a las listas custom para el objeto Resultado
+		ListaDoubleLinkedL listaDistancia = new ListaDoubleLinkedL();
+		ListaDoubleLinkedL listaCamino = new ListaDoubleLinkedL();
+		ListaDoubleLinkedL listaSolucion = new ListaDoubleLinkedL();
+		for(int i=0; i < n; i++){
+			listaDistancia.insertar(distancias[i], i);
+			listaCamino.insertar(caminos[i], i);
+			listaSolucion.insertar(visitado[i] ? i : -1, i);
+		}
+		
+		return new ResultadoDijkstra(listaDistancia, listaCamino, listaSolucion);
+	}
 	
 	public void muestraGrafo(){
 		double currCost;

@@ -170,6 +170,7 @@ public class LectorJson {
             }
         }
         List<Vertice> listaVertices = new ArrayList<>(vertices.values());
+        this.json = null; // Liberar la memoria del árbol JSON original
         listaVertices.sort((v1,v2)-> Integer.compare(v1.getIndice(), v2.getIndice()));
         return new DatosMapa(listaVertices,listaAristas);
     }
