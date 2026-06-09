@@ -621,16 +621,18 @@ public class ControladorGUI implements Initializable{
         }
     }
 
-    private void dibujarCaminoResaltado(GraphicsContext gc) {
+   private void dibujarCaminoResaltado(GraphicsContext gc) {
         if (this.caminoResaltado != null && this.caminoResaltado.tamanio() > 1) {
             gc.setStroke(Color.RED);
             gc.setLineWidth(3.0);
-            
+            gc.beginPath();
+            boolean firstPoint = true;
+           
             for (int i = 0; i < this.caminoResaltado.tamanio() - 1; i++) {
                 int idOrigen = (int) this.caminoResaltado.devolver(i);
                 int idDestino = (int) this.caminoResaltado.devolver(i + 1);
 
-                Vertice vO = datos.getVerticePorIndice(idOrigen);
+                /* Vertice vO = datos.getVerticePorIndice(idOrigen);
                 Vertice vD = datos.getVerticePorIndice(idDestino);
 
                 if (vO != null && vD != null) {
@@ -638,11 +640,49 @@ public class ControladorGUI implements Initializable{
                     double py1 = (mapOffsetY + (mapMaxLat - vO.getLatitud()) * mapScale) * factorZoom + offsetY;
                     double px2 = (mapOffsetX + ((vD.getLongitud() - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
                     double py2 = (mapOffsetY + (mapMaxLat - vD.getLatitud()) * mapScale) * factorZoom + offsetY;
-                    gc.strokeLine(px1, py1, px2, py2);
+                    gc.strokeLine(px1, py1, px2, py2); */
+                     // Buscamos la arista real que une estos dos vértices para obtener su geometría
+                Arista arcoActual = null;
+                ListaDoubleLinkedL adyacentes = grafo.getAdyacentes(idOrigen);
+                for (int j = 0; j < adyacentes.tamanio(); j++) {
+                    Arista a = (Arista) adyacentes.devolver(j);
+                    if (a.getDestino().getIndice() == idDestino) {
+                        arcoActual = a;
+                        break;
+                    }
+                }
+                 if (arcoActual != null) {
+                    List<Coordenada> geo = arcoActual.getGeometria();
+                    if (geo != null && !geo.isEmpty()) {
+                        for (Coordenada c : geo) {
+                            double[] p = convertirCoordenadasAPixeles(c.getLatitud(), c.getLongitud());
+                            if (firstPoint) {
+                                gc.moveTo(p[0], p[1]);
+                                firstPoint = false;
+                            } else {
+                                gc.lineTo(p[0], p[1]);
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback: si no se encuentra la arista, dibujamos línea recta entre vértices
+                    Vertice vO = datos.getVerticePorIndice(idOrigen);
+                    Vertice vD = datos.getVerticePorIndice(idDestino);
+                    if (vO != null && vD != null) {
+                        double[] p1 = convertirCoordenadasAPixeles(vO.getLatitud(), vO.getLongitud());
+                        double[] p2 = convertirCoordenadasAPixeles(vD.getLatitud(), vD.getLongitud());
+                        if (firstPoint) {
+                            gc.moveTo(p1[0], p1[1]);
+                            firstPoint = false;
+                        }
+                        gc.lineTo(p2[0], p2[1]);
+                    }
                 }
             }
+            gc.stroke();
         }
     }
+
 
     private void dibujarFlota(GraphicsContext gc) {
         
