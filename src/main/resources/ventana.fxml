@@ -5,12 +5,38 @@
 <?import javafx.scene.canvas.Canvas?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="GUI.ControladorGUI" prefWidth="900" prefHeight="600">
-    <center>
+   <!--  <center>
         <VBox alignment="CENTER" style="-fx-background-color: #1e1e1e; -fx-padding: 10;">
             <Label text="Mapa del Macrocentro de Salta" style="-fx-text-fill: white; -fx-font-size: 16;"/>
             <Canvas fx:id="canvasMapa" width="800" height="600"/>
         </VBox>
-    </center>
+    </center> -->
+    <center>
+    <VBox alignment="CENTER" style="-fx-background-color: #1e1e1e; -fx-padding: 10;" spacing="10">
+        
+        <HBox alignment="CENTER" maxWidth="800">
+    
+    <!-- 1. NUEVO BOTÓN: Al estar primero, queda pegado al margen izquierdo -->
+    <Button text="Cargar JSON" onAction="#handleCargarNuevoMapa" style="-fx-background-color: #0284c7; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"/>
+
+    <!-- 2. Espacio elástico que empuja el título al centro -->
+    <Region HBox.hgrow="ALWAYS"/>
+
+    <!-- 3. Tu título original en el centro -->
+    <Label text="Mapa de Salta" style="-fx-text-fill: white; -fx-font-size: 16;"/>
+
+    <!-- 4. Espacio elástico que empuja el ToggleButton a la derecha -->
+    <Region HBox.hgrow="ALWAYS"/>
+
+    <!-- 5. Tu ToggleButton original en el extremo derecho -->
+    <ToggleButton fx:id="btnMostrarFondo" text="Mapa: OFF" selected="false" onAction="#handleToggleFondo" style="-fx-text-fill: lightgray; -fx-background-color: #2a2a2a; -fx-cursor: hand;"/>
+
+</HBox>
+       <Pane fx:id="contenedorMapa" VBox.vgrow="ALWAYS">
+            <Canvas fx:id="canvasMapa" />
+        </Pane>
+    </VBox>
+</center>
 
     <right>
         <VBox spacing="15" style="-fx-padding: 15; -fx-background-color: #2d2d2d;" prefWidth="300">

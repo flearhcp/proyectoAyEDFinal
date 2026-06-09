@@ -18,8 +18,28 @@ public class Vertice {
     }
 
     public void agregarCalle(Calle calle) { //falta verificar repetidas antes de agregar
-        calles.add(calle);
-        cantCalles++;
+        if (!calles.contains(calle)){
+            calles.add(calle);
+            cantCalles++;
+        }
+    }
+
+    public List<Calle> getCalles() {
+        return calles;
+    }
+
+    public String getNombreInterseccion(){
+        if (calles == null || calles.isEmpty()) {
+            return "Intersección sin nombre (ID: " + osmId + ")";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < calles.size(); i++) {
+            sb.append(calles.get(i).getNombreAMostrar());
+            if (i < calles.size() - 1) {
+                sb.append(" y ");
+            }
+        }
+        return sb.toString();
     }
 
     public int getIndice() {

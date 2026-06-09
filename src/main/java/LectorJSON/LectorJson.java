@@ -4,7 +4,7 @@ import org.json.JSONArray;
 //import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 //notas: debo cambiar todas las arrayList por las clases de listas enlazadas de la catedra y cargar todas las coordenadas de las calles para dibujar el mapa
 public class LectorJson {
@@ -14,8 +14,17 @@ public class LectorJson {
     public LectorJson(String ruta) throws Exception {
 
         InputStream is = getClass().getResourceAsStream(ruta);
+
+        // Si no se encuentra como recurso interno, intentamos cargarlo desde el sistema de archivos
+        if (is == null) {
+            File f = new File(ruta);
+            if (f.exists()) {
+                is = new FileInputStream(f);
+            }
+        }
+
         if(is == null){
-            throw  new RuntimeException("¡Error critico! No se pudo cargar el recurso: "+ ruta+"dentro de la carpeta resources");
+            throw  new RuntimeException("¡Error critico! No se pudo cargar el recurso o archivo: " + ruta);
         }
         JSONTokener tokener = new JSONTokener(is);
         this.json = new JSONObject(tokener);
@@ -99,14 +108,13 @@ public class LectorJson {
                 //Normalizacion del nombre
                 String nombreOriginal = (tags != null) ? tags.optString("name","Calle sin nombre"): "Calle sin nombre";
                 String nombreNorm = normalizarNombre(nombreOriginal);
+                String shortName = (tags != null) ? tags.optString("short_name", null) : null;
 
                 boolean oneway = tags.optString("oneway", "no").equals("yes");
                 String tipo = tags.optString("highway", "unknown");
                 int velocidad =tags.optInt("maxspeed", obtenerVelocidadPorDefecto(tipo));
-
-
                 double velocidadMS = velocidad / 3.6;
-                Calle calle = diccionarioCalles.computeIfAbsent(nombreNorm, k -> new Calle(obj.optLong("id"),nombreNorm,oneway,velocidad,tipo));
+                Calle calle = diccionarioCalles.computeIfAbsent(nombreNorm, k -> new Calle(obj.optLong("id"), nombreNorm, shortName, oneway, velocidad, tipo));
 
                 long ultimoVertice = -1;
                 int indiceUltimoVertice = 0;
@@ -140,7 +148,6 @@ public class LectorJson {
 
                     // Extraemos la geometría para dibujar las curvas en JavaFX
                     List<Coordenada> geometriaTramo = new ArrayList<>();
-                    // Fix: usamos k <= j para incluir el nodo de destino en la curva
                     for (int k = indiceUltimoVertice; k <= j; k++) {
                         long idNodo = nodes.getLong(k);
                         geometriaTramo.add(coordenadasNodos1.get(idNodo));
@@ -167,12 +174,13 @@ public class LectorJson {
 
                     // Nos preparamos para la siguiente cuadra de la misma calle
                     ultimoVertice = actual;
-                    distanciaAcumulada = 0.0;
-                    indiceUltimoVertice = j; //
+                    indiceUltimoVertice=j;
+                    distanciaAcumulada= 0.0;
                 }
             }
         }
         List<Vertice> listaVertices = new ArrayList<>(vertices.values());
+        this.json = null; // Liberar la memoria del árbol JSON original
         listaVertices.sort((v1,v2)-> Integer.compare(v1.getIndice(), v2.getIndice()));
         return new DatosMapa(listaVertices,listaAristas);
     }

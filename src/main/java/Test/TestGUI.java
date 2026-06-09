@@ -13,7 +13,7 @@ import javafx.stage.Stage;
 public class TestGUI extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception{
-        String ruta = "/5Cuadras.json";
+        String ruta = "/2km.json";
         LectorJson lector = new LectorJson(ruta);
         DatosMapa datos = lector.generarDatosMapa();
         GrafoMapa grafo = new GrafoMapa(datos.getCantidadVertices(), datos);
