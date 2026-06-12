@@ -51,4 +51,12 @@ public class Vehiculo implements Comparable<Vehiculo> {
         }
         return pat.toString();
     }
+    public String getTiempoEspera(){
+        double tiempoSegundos;
+        int min,seg;
+        tiempoSegundos = this.ETA / 11.11;
+        min = (int)tiempoSegundos / 60;
+        seg = (int)tiempoSegundos % 60;
+        return String.format("%02d:%02d min",min,seg);
+    }
 }

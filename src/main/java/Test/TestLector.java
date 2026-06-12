@@ -2,6 +2,10 @@ package Test;
 
 import java.util.List;
 import LectorJSON.*;
+
+/**
+ * Clase de prueba para verificar el funcionamiento del {@code LectorJson}.
+ */
 public class TestLector {
 
     public static void main(String[] args) {

@@ -4,29 +4,59 @@ import recursos.*;
 
 public abstract class AbsGrafoD extends AbsGrafo implements OperacionesGD{
 	
+	/** Matriz de costos para el algoritmo de Floyd-Warshall. */
 	protected MatrizGrafo matrizCostoF,matrizCaminoF;
 
-	// Clase interna de apoyo para ordenar las evaluaciones en Dijkstra
+	/**
+	 * Clase interna de apoyo para ordenar las evaluaciones en el algoritmo de Dijkstra.
+	 * Implementa {@code Comparable} para permitir su uso en una cola de prioridad.
+	 */
 	protected static class NodoDistancia implements Comparable<NodoDistancia> {
+		/** El vértice representado por este nodo. */
 		public int vertice;
+		/** La distancia acumulada hasta este vértice desde el origen. */
 		public double distancia;
 		
+		/**
+		 * Constructor para NodoDistancia.
+		 * @param vertice El índice del vértice.
+		 * @param distancia La distancia acumulada hasta el vértice.
+		 */
 		public NodoDistancia(int vertice, double distancia) {
 			this.vertice = vertice;
 			this.distancia = distancia;
 		}
+		/**
+		 * Compara este NodoDistancia con otro basándose en sus distancias.
+		 * @param otro El otro NodoDistancia con el que comparar.
+		 * @return Un valor negativo si esta distancia es menor, cero si son iguales, o un valor positivo si es mayor.
+		 */
 		@Override
 		public int compareTo(NodoDistancia otro) {
 			return Double.compare(this.distancia, otro.distancia);
 		}
 	}
 
+	/**
+	 * Constructor para AbsGrafoD.
+	 * @param ordenGrafo El número de vértices en el grafo.
+	 */
 	public AbsGrafoD(int ordenGrafo){
 		super(ordenGrafo);
 	}
 		
+	/**
+	 * Método abstracto para cargar el grafo. Debe ser implementado por las subclases.
+	 */
 	public abstract void cargarGrafo();
 	
+	/**
+	 * Muestra los costos y caminos más cortos desde un vértice de inicio
+	 * a todos los demás vértices utilizando el algoritmo de Dijkstra.
+	 * Imprime el costo y un camino reconstruido para cada vértice alcanzable.
+	 *
+	 * @param startVertex El vértice de inicio para el cálculo de Dijkstra.
+	 */
 	public void muestraDijkstra(int startVertex){
 		double currCost; int w;
 		
@@ -50,56 +80,15 @@ public abstract class AbsGrafoD extends AbsGrafo implements OperacionesGD{
 		}
 		
 	}
-	
-		
-	/* public ResultadoDijkstra Dijkstra(int startVertex){
-		ListaDoubleLinkedL listaDistancia = new ListaDoubleLinkedL();
-		ListaDoubleLinkedL listaCamino = new ListaDoubleLinkedL();
-		ListaDoubleLinkedL listaSolucion = new ListaDoubleLinkedL();
-		ColaPrioridad<NodoDistancia> pq = new ColaPrioridad<>();
-		
-		for (int i=0; i<getOrden();i++){			
-			listaSolucion.insertar(-1, i);
-			listaCamino.insertar(-1, i);
-			listaDistancia.insertar(infinito, i);
-		}
-		// El costo de llegar al punto de inicio es 0
-		listaDistancia.reemplazar(0.0, startVertex);
-		
-		pq.meter(new NodoDistancia(startVertex, 0.0));
-		
-		while (!pq.estaVacia()) {
-			NodoDistancia actual = pq.sacar();
-			int minVertex = actual.vertice;
-			double minCost = actual.distancia;
-			
-			// Si el vértice ya fue procesado, lo descartamos
-			if ((int) listaSolucion.devolver(minVertex) != -1) {
-				continue;
-			}
-			
-			// Marcamos el vértice como procesado (agregado al conjunto solución)
-			listaSolucion.reemplazar(minVertex, minVertex);
-			
-			// Evaluamos todos sus adyacentes a través de la matriz de costo
-			for (int v = 0; v < getOrden(); v++) {
-				if ((int) listaSolucion.devolver(v) == -1) { // Si el vecino no ha sido visitado
-					double arcCost = (double) this.matrizCosto.devolver(minVertex, v);
-					if (arcCost != infinito) { // Si existe una conexión entre ellos
-						double currCost = (double) listaDistancia.devolver(v);
-						// Relajación de Dijkstra
-						if (minCost + arcCost < currCost) {
-							listaDistancia.reemplazar(minCost + arcCost, v);
-							listaCamino.reemplazar(minVertex, v);
-							pq.meter(new NodoDistancia(v, minCost + arcCost));
-						}
-					}
-				}
-			}
-		}
-		return new ResultadoDijkstra(listaDistancia, listaCamino, listaSolucion);
-	} */
 
+	/**
+	 * Implementa el algoritmo de Dijkstra para encontrar los caminos más cortos
+	 * desde un vértice de inicio dado a todos los demás vértices en el grafo.
+	 *
+	 * @param startVertex El vértice de inicio para el algoritmo.
+	 * @return Un objeto {@code ResultadoDijkstra} que contiene las distancias,
+	 *         los caminos y los vértices visitados.
+	 */
 	public ResultadoDijkstra Dijkstra(int startVertex){
 		int n = getOrden();
 		// Usamos arreglos primitivos para velocidad O(1) en acceso
@@ -108,7 +97,7 @@ public abstract class AbsGrafoD extends AbsGrafo implements OperacionesGD{
 		boolean[] visitado = new boolean[n];
 		
 		ColaPrioridad<NodoDistancia> pq = new ColaPrioridad<>();
-		
+		//Inicializamos las listas.
 		for (int i=0; i < n; i++){			
 			distancias[i] = infinito;
 			caminos[i] = -1;
@@ -161,6 +150,10 @@ public abstract class AbsGrafoD extends AbsGrafo implements OperacionesGD{
 		return new ResultadoDijkstra(listaDistancia, listaCamino, listaSolucion);
 	}
 	
+	/**
+	 * Muestra el grafo imprimiendo los costos de las aristas existentes
+	 * entre cada par de vértices.
+	 */
 	public void muestraGrafo(){
 		double currCost;
 		for (int i=0; i<getOrden();i++){

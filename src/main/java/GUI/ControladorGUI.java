@@ -21,7 +21,6 @@ import javafx.application.Platform;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
-import javafx.animation.PauseTransition;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
@@ -35,7 +34,6 @@ import javafx.concurrent.Task;
 
 import java.io.File;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 import Grafos.GrafoMapa;
@@ -43,6 +41,10 @@ import LectorJSON.*;
 import contenedores.*;
 import motor_matching_engine.*;
 
+/**
+ * Controlador para la interfaz gráfica de usuario (GUI) de la aplicación de mapas.
+ * Gestiona la interacción del usuario, la visualización del mapa y la lógica de despacho.
+ */
 public class ControladorGUI implements Initializable{
     @FXML private Canvas canvasMapa;
     @FXML private Pane contenedorMapa;
@@ -84,6 +86,13 @@ public class ControladorGUI implements Initializable{
     //para mostrar fondo
     private final ProveedorTiles proveedorTiles = new ProveedorTiles();
 
+    /**
+     * Método de inicialización llamado automáticamente por JavaFX al cargar el FXML.
+     * Configura el lienzo del mapa, los listeners de eventos, las fábricas de celdas para las listas,
+     * carga las imágenes y establece los tooltips.
+     * @param location La ubicación utilizada para resolver rutas relativas para el objeto raíz, o null si no se conoce.
+     * @param resource Los recursos utilizados para localizar el objeto raíz, o null si el objeto raíz no fue localizado.
+     */
     @Override
     public void initialize(URL location, ResourceBundle resource){
         // 1. Verificamos que el contenedor no sea nulo antes de operar con él
@@ -215,6 +224,11 @@ public class ControladorGUI implements Initializable{
         canvasMapa.heightProperty().addListener((observable, oldValue, newValue) -> dibujarGrafo());
     }
 
+    /**
+     * Maneja el evento de movimiento del ratón sobre el lienzo del mapa.
+     * Muestra tooltips con información de vehículos o pasajeros y actualiza la previsualización de colocación.
+     * @param event El evento de ratón.
+     */
     private void handleMouseMoved(MouseEvent event) {
         if (this.flota == null || this.datos == null) {
             tooltipMapa.hide();
@@ -273,6 +287,9 @@ public class ControladorGUI implements Initializable{
         }
     }
     
+    /**
+     * Actualiza la lista de vehículos disponibles en la interfaz gráfica.
+     */
     private void mostrarVehiculosDisponibles(){
         /* listaVehiculos.getItems().clear();
         if (this.flota != null) {
@@ -305,6 +322,9 @@ public class ControladorGUI implements Initializable{
     }
 
     
+    /**
+     * Maneja el evento de una nueva solicitud de viaje.
+     */
     @FXML
     private void handleNuevaSolicitud(){
         this.caminoResaltado = null; // Limpiamos el camino anterior si existiera
@@ -335,13 +355,13 @@ public class ControladorGUI implements Initializable{
             Vehiculo asignado = resultado.getVehiculoAsignado();
             
             if (asignado != null) {
-                listaDespacho.getItems().add("1. Vehiculo: " + asignado.getID() + " - ETA: " + String.format("%.2f", asignado.getETA()) + " (Asignado)");
+                listaDespacho.getItems().add("1. Vehiculo: " + asignado.getID() + " Llega en en " + asignado.getTiempoEspera() + " (Asignado)");
                 
                 ColaPrioridad<Vehiculo> cola = resultado.getVehiculosCandidatos();
                 int i = 2;
                 while (!cola.estaVacia()) {
                     Vehiculo v = cola.sacar();
-                    listaDespacho.getItems().add(i + ". Vehiculo: " + v.getID() + " - ETA: " + String.format("%.2f", v.getETA()));
+                    listaDespacho.getItems().add(i + ". Vehiculo: " + v.getID() + " tiempo de llegada " + v.getTiempoEspera());
                     i++;
                 }
                 
@@ -368,6 +388,9 @@ public class ControladorGUI implements Initializable{
         dibujarGrafo();
     }
 
+    /**
+     * Maneja el evento de cargar un nuevo mapa desde un archivo JSON.
+     */
     @FXML
     private void handleCargarNuevoMapa() {
         FileChooser fileChooser = new FileChooser();
@@ -418,6 +441,12 @@ public class ControladorGUI implements Initializable{
         }
     }
 
+    /**
+     * Inicia la animación de un viaje para un vehículo y un pasajero.
+     * @param vehiculo El vehículo que realizará el viaje.
+     * @param pasajero El pasajero que será transportado.
+     * @param rutaHaciaPasajero La ruta que el vehículo debe seguir para recoger al pasajero.
+     */
     private void iniciarAnimacionViaje(Vehiculo vehiculo, Usuario pasajero, ListaDoubleLinkedL rutaHaciaPasajero) {
         // 1. Animamos el vehículo hacia el pasajero
         Timeline animacionHaciaPasajero = crearTimelineViaje(vehiculo, rutaHaciaPasajero, () -> {
@@ -447,6 +476,13 @@ public class ControladorGUI implements Initializable{
         animacionHaciaPasajero.play();
     }
 
+    /**
+     * Crea una línea de tiempo (Timeline) para animar el movimiento de un vehículo a lo largo de una ruta.
+     * @param vehiculo El vehículo a animar.
+     * @param ruta La lista de vértices que componen la ruta.
+     * @param alTerminar Un {@code Runnable} que se ejecuta cuando la animación de la ruta ha terminado.
+     * @return Un objeto {@code Timeline} configurado para la animación.
+     */
     private Timeline crearTimelineViaje(Vehiculo vehiculo, ListaDoubleLinkedL ruta, Runnable alTerminar) {
         Timeline timeline = new Timeline();
         double velocidadMS = 150.0; // Milisegundos por vértice (ajústalo para cambiar la velocidad)
@@ -470,6 +506,9 @@ public class ControladorGUI implements Initializable{
         return timeline;
     }
 
+    /**
+     * Maneja el evento de limpiar la selección actual, reseteando el estado del mapa y los vehículos.
+     */
     @FXML
     private void handleLimpiarSeleccion(){
         listaDespacho.getItems().clear();
@@ -489,14 +528,24 @@ public class ControladorGUI implements Initializable{
         dibujarGrafo();
     }
 
+    /**
+     * Establece el modo de colocación en "agregar vehículo".
+     * El usuario podrá hacer clic en un vértice del mapa para añadir un nuevo vehículo.
+     */
      @FXML
     private void handleAgregarVehiculo() {
         this.colocar = 1;
         System.out.println("MODO: Selecciona un vértice para colocar el Vehículo.");
     }
 
+    /**
+     * Establece el modo de colocación en "agregar pasajero".
+     * El usuario primero seleccionará el origen y luego el destino del pasajero.
+     */
     @FXML
     private void handleAgregarPasajero() {
+        // Limpiamos el pasajero actual y el preview para evitar conflictos
+        this.pasajeroActual = null;
         this.colocar = 2;
         System.out.println("MODO: Selecciona un vértice para el ORIGEN del pasajero.");
     }
@@ -520,6 +569,9 @@ public class ControladorGUI implements Initializable{
         });
     }
 
+    /**
+     * Dibuja el grafo en el lienzo del mapa, incluyendo aristas, nodos, flota, pasajero y previsualizaciones.
+     */
     private void dibujarGrafo() {
         if (this.grafo == null || canvasMapa.getWidth() == 0 || canvasMapa.getHeight() == 0) {
             return;
@@ -552,6 +604,10 @@ public class ControladorGUI implements Initializable{
         dibujarPreviews(gc);
     }
 
+    /**
+     * Actualiza las escalas y offsets para el mapeo de coordenadas geográficas a píxeles del lienzo.
+     * @return true si la actualización fue exitosa, false si los datos del mapa no están disponibles.
+     */
     private boolean actualizarEscalasYOffsets() {
         this.datos = grafo.getDatosMapa();
         if (datos == null) return false;
@@ -582,6 +638,9 @@ public class ControladorGUI implements Initializable{
         return true;
     }
 
+    /**
+     * Dibuja las aristas del grafo en el lienzo del mapa.
+     */
     private void dibujarAristas(GraphicsContext gc) {
         gc.setStroke(mostrarFondo ? Color.rgb(128, 128, 128, 0.3) : Color.GRAY);
         // El grosor empieza en 1.0 y crece gradualmente con el factorZoom
@@ -609,6 +668,9 @@ public class ControladorGUI implements Initializable{
         gc.stroke(); // Dibujamos todas las aristas de una sola vez
     }
 
+    /**
+     * Dibuja los nodos (vértices) del grafo en el lienzo del mapa.
+     */
     private void dibujarNodos(GraphicsContext gc) {
         gc.setFill(mostrarFondo ? Color.rgb(30, 144, 255, 0.3) : Color.DODGERBLUE);
         for (int i = 0; i < grafo.getOrden(); i++) {
@@ -621,6 +683,9 @@ public class ControladorGUI implements Initializable{
         }
     }
 
+   /**
+    * Dibuja el camino resaltado (ruta de Dijkstra) en el lienzo del mapa.
+    */
    private void dibujarCaminoResaltado(GraphicsContext gc) {
         if (this.caminoResaltado != null && this.caminoResaltado.tamanio() > 1) {
             gc.setStroke(Color.RED);
@@ -684,6 +749,9 @@ public class ControladorGUI implements Initializable{
     }
 
 
+    /**
+     * Dibuja la flota de vehículos en el lienzo del mapa.
+     */
     private void dibujarFlota(GraphicsContext gc) {
         
         if (this.flota != null) {
@@ -717,6 +785,9 @@ public class ControladorGUI implements Initializable{
         }
     }
 
+    /**
+     * Dibuja el pasajero (origen y destino) en el lienzo del mapa.
+     */
     private void dibujarPasajero(GraphicsContext gc) {
         if (this.pasajeroActual != null) {
             //gc.setFill(Color.YELLOW);
@@ -750,6 +821,11 @@ public class ControladorGUI implements Initializable{
         }
     }
   
+    /**
+     * Dibuja el fondo del mapa utilizando tiles de OpenStreetMap.
+     * Calcula el nivel de zoom óptimo y descarga/cachea los tiles necesarios.
+     * @param gc El contexto gráfico 2D del lienzo.
+     */
     private void dibujarFondoMapa(GraphicsContext gc) {
     // Calculamos el nivel de zoom de OpenStreetMap óptimo según la escala actual de la pantalla
     // La escala 'mapScale * factorZoom' es píxeles por grado de longitud proyectada.
@@ -782,12 +858,23 @@ public class ControladorGUI implements Initializable{
     }
 }
 
+    /**
+     * Convierte coordenadas de latitud y longitud a coordenadas de píxeles en el lienzo.
+     * Aplica las transformaciones de escala, offset y zoom actuales.
+     * @param lat La latitud a convertir.
+     * @param lon La longitud a convertir.
+     * @return Un arreglo de dos elementos {@code double[]} donde el primer elemento es la coordenada X
+     *         y el segundo elemento es la coordenada Y en píxeles.
+     */
     private double[] convertirCoordenadasAPixeles(double lat, double lon) {
         double x = (mapOffsetX + ((lon - mapMinLon) * mapFactorLon) * mapScale) * factorZoom + offsetX;
         double y = (mapOffsetY + (mapMaxLat - lat) * mapScale) * factorZoom + offsetY;
         return new double[]{x, y};
     }
 
+    /**
+     * Dibuja las previsualizaciones de colocación de vehículos o pasajeros en el lienzo.
+     */
      private void dibujarPreviews(GraphicsContext gc) {
         if (this.colocar == 0 || this.nodoPreview == null) return;
 
@@ -809,6 +896,12 @@ public class ControladorGUI implements Initializable{
         gc.setGlobalAlpha(1.0);
     }
 
+    /**
+     * Busca el vértice del grafo más cercano a las coordenadas de píxeles dadas.
+     * @param mouseX Coordenada X del ratón en píxeles.
+     * @param mouseY Coordenada Y del ratón en píxeles.
+     * @return El objeto {@code Vertice} más cercano, o null si no se encuentra ninguno dentro de un umbral.
+     */
     private Vertice buscarVerticeCercano(double mouseX, double mouseY) {
         if (datos == null) return null;
         for (int i = 0; i < datos.getCantidadVertices(); i++) {
@@ -824,6 +917,11 @@ public class ControladorGUI implements Initializable{
         return null;
     }
 
+    /**
+     * Maneja el evento de clic del ratón en el lienzo del mapa.
+     * Permite agregar vehículos o pasajeros según el modo de colocación actual.
+     * @param event El evento de ratón.
+     */
     private void handleMouseClicked(MouseEvent event) {
         if (this.colocar == 0 || this.datos == null) return;
 

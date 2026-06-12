@@ -27,7 +27,7 @@ public class MotorDespacho {
         if(!colaDePrioridad.estaVacia()){ //Aca deberia estar la opcion si el conductor acepta
             elegido = colaDePrioridad.sacar();
             elegido.setDisponible(false); // Lo marcamos como ocupado
-            System.out.println("Vehiculo elegido: "+elegido.getID()+" Asignado con ETA: "+ elegido.getETA());
+            //System.out.println("Vehiculo elegido: "+elegido.getID()+" Asignado con ETA: "+ elegido.getETA());
             return new ResultadoDespacho(elegido, colaDePrioridad);
         }
         return new ResultadoDespacho(null, colaDePrioridad);

@@ -5,6 +5,10 @@ import Grafos.*;
 import motor_matching_engine.*;
 import contenedores.*;
 
+/**
+ * Clase de prueba para verificar el funcionamiento del {@code MotorDespacho}.
+ * Carga un mapa, genera pasajeros y vehículos aleatorios, y simula un despacho de viaje.
+ */
 public class TestMotor {
     public static void main(String[] args) {
         try {

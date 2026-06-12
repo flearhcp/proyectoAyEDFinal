@@ -7,8 +7,15 @@ import org.json.JSONTokener;
 import java.io.*;
 import java.util.*;
 //notas: debo cambiar todas las arrayList por las clases de listas enlazadas de la catedra y cargar todas las coordenadas de las calles para dibujar el mapa
+
+/**
+ * Clase encargada de leer y parsear un archivo JSON de OpenStreetMap
+ * para generar un objeto {@code DatosMapa} que contiene la información
+ * de vértices y aristas del grafo.
+ */
 public class LectorJson {
 
+    /** Objeto JSON principal que contiene los datos del mapa. */
     private JSONObject json;
 
     public LectorJson(String ruta) throws Exception {
@@ -30,13 +37,20 @@ public class LectorJson {
         this.json = new JSONObject(tokener);
     }
 
+    /**
+     * Genera un objeto {@code DatosMapa} a partir del JSON cargado.
+     * Este método procesa los nodos y caminos para identificar intersecciones,
+     * asignar índices a los vértices y crear las aristas con sus propiedades.
+     * @return Un objeto {@code DatosMapa} con la lista de vértices y aristas.
+     * @throws Exception Si ocurre un error durante el procesamiento del JSON.
+     */
     public DatosMapa generarDatosMapa() throws Exception {
         JSONArray elements = json.getJSONArray("elements");
 
         // CONTAR APARICIONES DE NODOS
         Map<Long, Integer> apariciones = new HashMap<>();
         Map<Long,Coordenada> coordenadasNodos1 = new HashMap<>();
-        List<JSONObject> listaWays = new ArrayList<>();
+        //List<JSONObject> listaWays = new ArrayList<>();
 
         for (int i = 0; i < elements.length(); i++) {
             JSONObject obj = elements.getJSONObject(i);
@@ -184,6 +198,12 @@ public class LectorJson {
         listaVertices.sort((v1,v2)-> Integer.compare(v1.getIndice(), v2.getIndice()));
         return new DatosMapa(listaVertices,listaAristas);
     }
+
+    /**
+     * Obtiene la velocidad máxima por defecto en km/h basada en el tipo de carretera.
+     * @param tipo El tipo de carretera (ej. "primary", "residential").
+     * @return La velocidad máxima por defecto.
+     */
     
     private int obtenerVelocidadPorDefecto(String tipo){
         int vel;
@@ -197,6 +217,11 @@ public class LectorJson {
         }
         return vel;
     }
+    /**
+     * Normaliza el nombre de una calle para facilitar comparaciones.
+     * @param nombre El nombre original de la calle.
+     * @return El nombre normalizado.
+     */
     private String normalizarNombre (String nombre){
         if(nombre == null) return "Desconocida";
 
@@ -208,6 +233,12 @@ public class LectorJson {
 
         return norm;
     }
+    /**
+     * Calcula la distancia entre dos coordenadas geográficas utilizando la fórmula de Haversine.
+     * @param c1 La primera coordenada.
+     * @param c2 La segunda coordenada.
+     * @return La distancia en metros entre las dos coordenadas.
+     */
     private double calcularDistanciaHaversine(Coordenada c1, Coordenada c2) {
         if (!c1.esValida() || !c2.esValida()) return 0.0;
 
