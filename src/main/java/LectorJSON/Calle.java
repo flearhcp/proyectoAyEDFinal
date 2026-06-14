@@ -86,37 +86,5 @@ public class Calle {
     public List<Coordenada> getGeometria(){
         return this.geometria;
     }
-/*     private String nombre;
-    private String tipo;
-    private boolean manoUnica;
 
-    private List<Coordenada> puntos;
-
-    public Calle(
-            String nombre,
-            String tipo,
-            boolean manoUnica) {
-
-        this.nombre = nombre;
-        this.tipo = tipo;
-        this.manoUnica = manoUnica;
-
-        puntos = new ArrayList<>();
-    }
-
-    public void agregarPunto(Coordenada c) {
-
-        puntos.add(c);
-    }
-
-    @Override
-    public String toString() {
-
-        return "Calle{" +
-                "nombre='" + nombre + '\'' +
-                ", tipo='" + tipo + '\'' +
-                ", manoUnica=" + manoUnica +
-                ", puntos=" + puntos.size() +
-                '}';
-    } */
 }
